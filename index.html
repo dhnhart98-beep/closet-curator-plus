@@ -63,6 +63,16 @@
     .card{border:1px solid var(--line);border-radius:17px;overflow:hidden;background:#fff;position:relative}
     .image{aspect-ratio:4/5;background:linear-gradient(145deg,#edf6f5,#fff);display:grid;place-items:center;font-size:48px;overflow:hidden}
     .image img{width:100%;height:100%;object-fit:cover}
+    .look-collage{min-height:270px;padding:10px;background:linear-gradient(145deg,#edf6f5,#fff);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .look-piece{min-height:118px;border-radius:13px;overflow:hidden;background:#fff;border:1px solid var(--line);position:relative;display:grid;place-items:center}
+    .look-piece img{width:100%;height:100%;object-fit:contain;background:#fff}
+    .look-piece .look-icon{font-size:40px}
+    .look-piece-label{position:absolute;left:6px;bottom:6px;max-width:calc(100% - 12px);padding:4px 7px;border-radius:999px;background:rgba(17,17,17,.78);color:#fff;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .look-piece:last-child:nth-child(odd){grid-column:1/-1}
+    .slot-preview{width:100%;display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;text-align:left}
+    .slot-preview img{width:64px;height:72px;object-fit:contain;background:#fff;border-radius:10px;border:1px solid var(--line)}
+    .slot-preview .slot-icon{width:64px;height:72px;display:grid;place-items:center;background:#fff;border-radius:10px;font-size:28px}
+    .look-date{font-size:11px;color:var(--muted);margin:7px 0 10px}
     .body{padding:13px}.name{font-weight:850;margin-bottom:5px}.meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
     .heart{position:absolute;right:10px;top:10px;border:0;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.94);font-size:18px}
     .tag{display:inline-flex;padding:5px 9px;border-radius:999px;background:var(--soft);color:var(--teal-dark);font-size:11px;font-weight:850}
@@ -217,7 +227,7 @@
     </section>
 
     <section id="outfits" class="view hidden">
-      <div class="topbar"><div><div class="eyebrow">Saved combinations</div><h2>Lookbook</h2><p class="subtitle">Keep your best outfits ready to repeat.</p></div></div>
+      <div class="topbar"><div><div class="eyebrow">Saved combinations</div><h2>Lookbook</h2><p class="subtitle">See every saved outfit as a visual collage of your clothing photos.</p></div></div>
       <div class="panel"><div id="looksGrid" class="grid closet-grid"></div></div>
     </section>
 
@@ -362,7 +372,7 @@ function renderCloset(){
  $("beautyGrid").innerHTML=items.filter(x=>["Beauty","Accessory","Handbag"].includes(x.category)).map(card).join("")||`<div class="empty">Add beauty, jewelry, or handbags.</div>`;
 }
 function renderSlots(){
- document.querySelectorAll(".slot").forEach(el=>{const x=current[el.dataset.slot];el.classList.toggle("filled",!!x);el.innerHTML=x?`<strong>${esc(x.name)}</strong><small>${esc(x.color||x.category)}</small>`:`Choose ${el.dataset.slot.toLowerCase()}`})
+ document.querySelectorAll(".slot").forEach(el=>{const x=current[el.dataset.slot];el.classList.toggle("filled",!!x);el.innerHTML=x?`<div class="slot-preview">${x.image?`<img src="${x.image}" alt="${esc(x.name)}">`:`<span class="slot-icon">${icons[x.category]||"✦"}</span>`}<span><strong>${esc(x.name)}</strong><small style="display:block;margin-top:4px">${esc(x.color||x.category)}</small></span></div>`:`Choose ${el.dataset.slot.toLowerCase()}`})
 }
 function cycle(type){const a=items.filter(x=>x.category===type);if(!a.length)return alert(`Add a ${type.toLowerCase()} first.`);cycleIndex[type]=((cycleIndex[type]??-1)+1)%a.length;current[type]=a[cycleIndex[type]];renderSlots()}
 function surprise(){
@@ -376,7 +386,7 @@ function saveLook(){
  looks.unshift({name,items:current,createdAt:new Date().toISOString()});persist();renderAll()
 }
 function renderLooks(){
- $("looksGrid").innerHTML=looks.length?looks.map((l,i)=>`<article class="card"><div class="image">✨</div><div class="body"><div class="name">${esc(l.name)}</div><p class="subtitle" style="font-size:12px;line-height:1.5">${Object.entries(l.items).map(([k,v])=>`${k}: ${esc(v.name)}`).join("<br>")}</p><button class="btn danger" onclick="deleteLook(${i})">Delete</button></div></article>`).join(""):`<div class="empty">No saved looks yet.</div>`
+ $("looksGrid").innerHTML=looks.length?looks.map((l,i)=>{const pieces=Object.entries(l.items).filter(([,v])=>v);const collage=pieces.map(([type,v])=>`<div class="look-piece">${v.image?`<img src="${v.image}" alt="${esc(v.name)}">`:`<span class="look-icon">${icons[v.category]||"✦"}</span>`}<span class="look-piece-label">${esc(type)} · ${esc(v.name)}</span></div>`).join("");const saved=l.createdAt?new Date(l.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"";return `<article class="card"><div class="look-collage">${collage}</div><div class="body"><div class="name">${esc(l.name)}</div>${saved?`<div class="look-date">Saved ${saved}</div>`:""}<p class="subtitle" style="font-size:12px;line-height:1.5">${pieces.map(([k,v])=>`${esc(k)}: ${esc(v.name)}`).join("<br>")}</p><button class="btn danger" onclick="deleteLook(${i})">Delete</button></div></article>`}).join(""):`<div class="empty">Build and save an outfit to see its visual collage here.</div>`
 }
 function renderPlanner(){
  const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
