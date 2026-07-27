@@ -1,0 +1,9 @@
+{
+  "name": "Closet Curator+",
+  "short_name": "Closet+",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f8f8",
+  "theme_color": "#0abab5",
+  "description": "A personal wardrobe, outfit planning, packing, and cost-per-wear app."
+}
