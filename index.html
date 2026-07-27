@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0abab5" />
   <link rel="manifest" href="manifest.json" />
-  <title>Closet Curator+</title>
+  <title>DZ Closet Curator+</title>
   <style>
     :root{
       --ink:#111;
@@ -104,7 +104,7 @@
 <body>
 <div class="shell">
   <aside>
-    <div class="brand"><div class="logo">CC+</div><div><h1>Closet Curator+</h1><small>Luxury wardrobe assistant</small></div></div>
+    <div class="brand"><div class="logo">DZ</div><div><h1>DZ Closet Curator+</h1><small>Luxury wardrobe assistant</small></div></div>
     <nav>
       <button class="nav active" data-view="dashboard">Dashboard</button>
       <button class="nav" data-view="closet">My Closet</button>
@@ -122,7 +122,7 @@
   <main>
     <section id="dashboard" class="view">
       <div class="topbar">
-        <div><div class="eyebrow">Personal style dashboard</div><h2>Your closet, curated.</h2><p class="subtitle">Style what you own, plan smarter, and shop with intention.</p></div>
+        <div><div class="eyebrow">DZ personal style dashboard</div><h2>DZ’s closet, curated.</h2><p class="subtitle">Style what you own, plan smarter, and shop with intention.</p></div>
         <button class="btn primary openAdd">+ Add item</button>
       </div>
 
@@ -270,11 +270,12 @@
       <input id="itemBrand" placeholder="Brand" />
       <input id="itemPrice" type="number" step="0.01" min="0" placeholder="Purchase price ($)" />
       <input id="itemWears" type="number" min="0" placeholder="Number of wears" value="0" />
-      <input id="itemImage" class="wide" type="file" accept="image/*" capture="environment" />
+      <label class="wide" for="itemImage"><strong>Choose an item photo</strong></label>
+      <input id="itemImage" class="wide" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" />
       <textarea id="itemNotes" class="wide" rows="3" placeholder="Fit notes, pattern, styling ideas..."></textarea>
       <button class="btn primary wide" type="submit">Add to closet</button>
     </form>
-    <p class="camera-note">On iPad, the photo field can open your camera or photo library. Automatic background removal and brand recognition require a connected AI service.</p>
+    <p class="camera-note">On iPad, tap “Choose File,” then select Photo Library to use an existing photo. Automatic background removal and brand recognition require a connected AI service.</p>
   </div>
 </div>
 
