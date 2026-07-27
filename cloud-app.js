@@ -215,7 +215,10 @@
       const item = current[element.dataset.slot];
       element.classList.toggle("filled", Boolean(item));
       element.innerHTML = item
-        ? `<strong>${esc(item.name)}</strong><small>${esc(item.color || item.category)}</small>`
+        ? `<div class="slot-preview">${item.image
+          ? `<img src="${esc(item.image)}" alt="${esc(item.name)}">`
+          : `<span class="slot-icon">${icons[item.category] || "✦"}</span>`}
+          <span><strong>${esc(item.name)}</strong><small style="display:block;margin-top:4px">${esc(item.color || item.category)}</small></span></div>`
         : `Choose ${element.dataset.slot.toLowerCase()}`;
     });
   }
@@ -262,13 +265,26 @@
 
   function renderLooks() {
     $("looksGrid").innerHTML = looks.length
-      ? looks.map((look) => `<article class="card"><div class="image">✨</div><div class="body">
-        <div class="name">${esc(look.name)}</div>
-        <p class="subtitle" style="font-size:12px;line-height:1.5">${Object.entries(look.items)
-          .map(([type, item]) => `${esc(type)}: ${esc(item.name)}`).join("<br>")}</p>
-        <button class="btn danger" onclick="deleteLook('${look.id}')">Delete</button>
-      </div></article>`).join("")
-      : '<div class="empty">No saved looks yet.</div>';
+      ? looks.map((look) => {
+        const pieces = Object.entries(look.items).filter(([, item]) => item);
+        const collage = pieces.map(([type, item]) => `<div class="look-piece">
+          ${item.image
+            ? `<img src="${esc(item.image)}" alt="${esc(item.name)}">`
+            : `<span class="look-icon">${icons[item.category] || "✦"}</span>`}
+          <span class="look-piece-label">${esc(type)} · ${esc(item.name)}</span>
+        </div>`).join("");
+        const saved = look.created_at
+          ? new Date(look.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+          : "";
+        return `<article class="card"><div class="look-collage">${collage}</div><div class="body">
+          <div class="name">${esc(look.name)}</div>
+          ${saved ? `<div class="look-date">Saved ${saved}</div>` : ""}
+          <p class="subtitle" style="font-size:12px;line-height:1.5">${pieces
+            .map(([type, item]) => `${esc(type)}: ${esc(item.name)}`).join("<br>")}</p>
+          <button class="btn danger" onclick="deleteLook('${look.id}')">Delete</button>
+        </div></article>`;
+      }).join("")
+      : '<div class="empty">Build and save an outfit to see its visual collage here.</div>';
   }
 
   function weekDates() {
