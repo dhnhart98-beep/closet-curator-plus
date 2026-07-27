@@ -537,6 +537,7 @@
     } else {
       items = []; looks = []; planner = {}; shopping = []; current = {};
       renderAll();
+      status("Sign in, or create an account if this is your first visit.");
       syncStatus(configured ? "Sign in required" : "Setup required");
     }
   }

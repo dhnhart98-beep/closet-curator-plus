@@ -96,11 +96,12 @@ Device test:
 
 SQL policy test:
 
-1. In **Authentication → Users**, copy the UUIDs for A and B.
-2. Replace the two placeholder UUIDs in
-   `supabase/tests/rls_isolation_test.sql`.
-3. Run the test in SQL Editor.
-4. A successful run ends with `ROLLBACK` and no RLS failure exception.
+1. Copy `supabase/tests/rls_isolation_test.sql` into SQL Editor.
+2. Run the complete script.
+3. A successful run ends with `ROLLBACK` and no RLS failure exception.
+
+The test creates two disposable users inside a transaction. It does not send
+email and leaves no users or wardrobe records behind.
 
 Delete the disposable accounts after testing.
 
