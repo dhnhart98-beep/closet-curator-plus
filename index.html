@@ -13,9 +13,6 @@
       --card:#fff;
       --teal:#0abab5;
       --teal-dark:#087f7c;
-      --pink:#ff91bb;
-      --purple:#8f62c7;
-      --lavender:#eadcf8;
       --soft:#def6f4;
       --line:#e3ebea;
       --muted:#6d7776;
@@ -28,13 +25,13 @@
     button,input,select,textarea{font:inherit}
     button{cursor:pointer}
     .shell{min-height:100vh;display:grid;grid-template-columns:255px 1fr}
-    aside{background:linear-gradient(180deg,#111 0%,#201428 100%);color:#fff;padding:24px 18px;position:sticky;top:0;height:100vh;overflow:auto}
+    aside{background:var(--ink);color:#fff;padding:24px 18px;position:sticky;top:0;height:100vh;overflow:auto}
     .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-    .logo{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,var(--pink),var(--teal));display:grid;place-items:center;color:var(--ink);font-weight:900}
+    .logo{width:46px;height:46px;border-radius:15px;background:var(--teal);display:grid;place-items:center;color:var(--ink);font-weight:900}
     .brand h1{font-size:18px;margin:0}.brand small{color:#adb8b7}
     nav{display:grid;gap:7px}
     .nav{border:0;background:transparent;color:#cbd5d4;text-align:left;padding:12px 13px;border-radius:12px}
-    .nav:hover,.nav.active{background:linear-gradient(90deg,rgba(255,145,187,.2),rgba(143,98,199,.22));color:#fff}
+    .nav:hover,.nav.active{background:rgba(255,255,255,.1);color:#fff}
     main{padding:28px;min-width:0}
     .view.hidden{display:none}
     .topbar{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:22px}
@@ -81,13 +78,14 @@
     .empty{text-align:center;color:var(--muted);padding:34px;border:1px dashed var(--line);border-radius:15px;grid-column:1/-1}
     .pill-row{display:flex;gap:8px;flex-wrap:wrap}
     .weather-box{padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--soft),#fff);border:1px solid #cfe9e7}
-    .kawaii-welcome{display:grid;grid-template-columns:minmax(0,.8fr) minmax(260px,1.2fr);align-items:center;overflow:hidden;padding:0;margin-bottom:18px;background:linear-gradient(135deg,#fff4f8,#f5edff)}
-    .kawaii-copy{padding:28px}.kawaii-copy h3{font-size:clamp(24px,3vw,36px);letter-spacing:-.03em;margin:6px 0 10px}.kawaii-copy p{max-width:36ch;line-height:1.55}
-    .kawaii-art{width:100%;height:min(370px,42vw);min-height:260px;object-fit:cover;object-position:center}
-    .mood-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.mood-badges .tag:nth-child(1){background:#ffe1ed;color:#9e3d67}.mood-badges .tag:nth-child(2){background:var(--lavender);color:#62408c}
     .recommendation{font-size:18px;font-weight:800;line-height:1.35}
     .camera-note{font-size:12px;color:var(--muted);line-height:1.45}
     .install-banner{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 14px;border-radius:14px;box-shadow:var(--shadow);display:none;gap:10px;align-items:center;z-index:15}
+    .auth-screen{position:fixed;inset:0;z-index:100;background:linear-gradient(145deg,#071918,#111);display:grid;place-items:center;padding:20px}
+    .auth-screen.hidden{display:none}.auth-card{width:min(440px,100%);background:#fff;border-radius:24px;padding:28px;box-shadow:var(--shadow)}
+    .auth-card h2{font-size:34px}.auth-card form{display:grid;gap:11px;margin-top:18px}.auth-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .status{padding:11px 13px;border-radius:11px;background:var(--soft);color:var(--teal-dark);margin:12px 0;font-size:13px}
+    .status.error{background:#fff0f0;color:var(--danger)}.sync-badge{position:fixed;right:16px;bottom:16px;z-index:12}
     @media(max-width:950px){
       .shell{grid-template-columns:1fr}
       aside{height:auto;position:static;padding:14px}
@@ -97,7 +95,6 @@
       main{padding:18px 13px 90px}
       .stats{grid-template-columns:repeat(2,1fr)}
       .two,.three{grid-template-columns:1fr}
-      .kawaii-welcome{grid-template-columns:1fr 1fr}
       .calendar{grid-template-columns:repeat(2,1fr)}
     }
     @media(max-width:560px){
@@ -105,12 +102,28 @@
       .closet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       .form-grid{grid-template-columns:1fr}.wide{grid-column:auto}
       .slots{grid-template-columns:1fr 1fr}
-      .kawaii-welcome{grid-template-columns:1fr}.kawaii-copy{padding:20px}.kawaii-art{height:320px}
       .card .body{padding:10px}.name{font-size:14px}
     }
   </style>
 </head>
 <body>
+<section id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="logo">CC+</div>
+    <h2>Welcome to your closet.</h2>
+    <p class="subtitle">Sign in to securely sync your wardrobe across devices.</p>
+    <div id="authStatus" class="status">Connect your Supabase project to begin.</div>
+    <form id="authForm">
+      <input id="authEmail" type="email" autocomplete="email" required placeholder="Email address" />
+      <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="Password (8+ characters)" />
+      <div class="auth-actions">
+        <button class="btn primary" type="submit">Sign in</button>
+        <button class="btn ghost" id="signUpBtn" type="button">Create account</button>
+        <button class="btn ghost" id="resetPasswordBtn" type="button">Reset password</button>
+      </div>
+    </form>
+  </div>
+</section>
 <div class="shell">
   <aside>
     <div class="brand"><div class="logo">DZ</div><div><h1>DZ Closet Curator+</h1><small>Luxury wardrobe assistant</small></div></div>
@@ -134,16 +147,6 @@
         <div><div class="eyebrow">DZ personal style dashboard</div><h2>DZ’s closet, curated.</h2><p class="subtitle">Style what you own, plan smarter, and shop with intention.</p></div>
         <button class="btn primary openAdd">+ Add item</button>
       </div>
-
-      <section class="panel kawaii-welcome" aria-label="Hello Kitty and Kuromi inspired style welcome">
-        <div class="kawaii-copy">
-          <div class="eyebrow">Hello Kitty + Kuromi-inspired mood</div>
-          <h3>Sweet style. Mischievous edge.</h3>
-          <p class="subtitle">Mix pretty pink details with bold black-and-purple attitude—always finished with a little DZ teal.</p>
-          <div class="mood-badges"><span class="tag">Sweet & polished</span><span class="tag">Cute & rebellious</span></div>
-        </div>
-        <img class="kawaii-art" src="assets/dz-kawaii-duo.png" alt="Original kawaii white kitten and black bunny fashion mascots" />
-      </section>
 
       <div class="grid stats">
         <div class="stat"><span>Total pieces</span><strong id="statTotal">0</strong></div>
@@ -258,16 +261,21 @@
       <div class="topbar"><div><div class="eyebrow">Your data</div><h2>Sync + Settings</h2><p class="subtitle">Export your closet now; connect cloud sync in a production build.</p></div></div>
       <div class="grid two">
         <div class="panel">
+          <h3>Account + cloud sync</h3>
+          <p id="accountEmail" class="subtitle" style="margin:10px 0 16px">Not signed in</p>
+          <button class="btn danger" id="signOutBtn">Sign out</button>
+        </div>
+        <div class="panel">
           <h3>Backup</h3>
           <p class="subtitle" style="margin:10px 0 16px">Download a JSON backup of your closet, looks, planner, and shopping list.</p>
           <button class="btn primary" id="exportData">Export data</button>
           <label class="btn ghost" style="display:inline-block;margin-left:8px">Import data<input id="importData" type="file" accept="application/json" hidden></label>
         </div>
         <div class="panel">
-          <h3>Cloud-ready roadmap</h3>
+          <h3>Connected services</h3>
           <div class="list" style="margin-top:14px">
-            <div class="list-row"><span>iCloud / account sign-in</span><span class="tag">Production</span></div>
-            <div class="list-row"><span>Cross-device photo sync</span><span class="tag">Production</span></div>
+            <div class="list-row"><span>Account sign-in</span><span class="tag">Supabase</span></div>
+            <div class="list-row"><span>Cross-device photo sync</span><span class="tag">Supabase</span></div>
             <div class="list-row"><span>Live weather integration</span><span class="tag">Production</span></div>
             <div class="list-row"><span>AI background removal + tagging</span><span class="tag">Production</span></div>
           </div>
@@ -304,7 +312,7 @@
   <button class="btn ghost" id="dismissInstall">Later</button>
 </div>
 
-<script>
+<script type="text/plain" id="legacy-local-only-code">
 const icons={Top:"👚",Bottom:"👖",Dress:"👗",Outerwear:"🧥",Shoes:"👠",Accessory:"💍",Handbag:"👜",Beauty:"💄"};
 const seed=[
 {id:crypto.randomUUID(),name:"Black corset top",category:"Top",color:"Black",season:"Year-round",occasion:"Night out",brand:"",price:55,wears:5,notes:"",favorite:true,image:""},
@@ -432,5 +440,9 @@ $("dismissInstall").onclick=()=>$("installBanner").style.display="none";
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));
 renderAll();surprise();
 </script>
+<div id="syncBadge" class="tag sync-badge">Connecting…</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="cloud-app.js"></script>
 </body>
 </html>
