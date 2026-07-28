@@ -23,6 +23,7 @@ browser app.
 3. Copy the complete contents of
    `supabase/migrations/202607270001_initial_schema.sql`.
 4. Paste it into the editor and select **Run** once.
+5. Run `supabase/migrations/202607270002_shopping_list_products.sql`.
 
 This creates:
 
@@ -36,6 +37,12 @@ This creates:
 - ownership policies for select, insert, update, and delete
 - per-user photo-folder policies
 - realtime publication for synced tables
+- product links, pricing, luxury/resale details, and private shopping images
+
+Shopping product images reuse the private `clothing-photos` bucket at
+`{user_id}/shopping-list/{item_id}/{filename}`. The existing storage policies
+restrict the first folder segment to the signed-in user's ID, so no public
+bucket or service-role key is needed.
 
 Do not disable RLS.
 
@@ -99,6 +106,9 @@ SQL policy test:
 1. Copy `supabase/tests/rls_isolation_test.sql` into SQL Editor.
 2. Run the complete script.
 3. A successful run ends with `ROLLBACK` and no RLS failure exception.
+
+Repeat these steps with `supabase/tests/shopping_list_security_test.sql`. It
+checks both shopping records and product-image paths.
 
 The test creates two disposable users inside a transaction. It does not send
 email and leaves no users or wardrobe records behind.

@@ -1,6 +1,6 @@
 
-const CACHE = "closet-curator-cloud-v2";
-const ASSETS = ["./manifest.json", "./cloud-app.js"];
+const CACHE = "closet-curator-cloud-v3";
+const ASSETS = ["./manifest.json", "./cloud-app.js", "./shopping-utils.js"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));

@@ -20,7 +20,7 @@ It is not loaded by the cloud app.
 Follow [SETUP_SUPABASE.md](SETUP_SUPABASE.md). In summary:
 
 1. Create a Supabase project in your own account.
-2. Run `supabase/migrations/202607270001_initial_schema.sql`.
+2. Run both migrations in `supabase/migrations/` in filename order.
 3. Configure the GitHub Pages URL in Supabase Auth URL settings.
 4. Copy the project's public URL and anon/publishable key into `config.js`.
 5. Commit and publish the updated files.
@@ -37,7 +37,8 @@ intended to be public; RLS and storage policies enforce access.
 - Search and filter
 - Build and save outfits
 - Weekly planning
-- Shopping list
+- Shopping products with private thumbnails, safe retailer links, prices,
+  desired size/color, luxury-resale details, filters, sorting, and purchased status
 - Cost-per-wear analytics
 - Live cross-device refresh
 - JSON export
@@ -53,6 +54,7 @@ can prevent authentication redirects and service workers from working.
 ## Security verification
 
 After creating two disposable accounts, follow
-`supabase/tests/rls_isolation_test.sql` and the device test in
+`supabase/tests/rls_isolation_test.sql`,
+`supabase/tests/shopping_list_security_test.sql`, and the device test in
 `SETUP_SUPABASE.md`. The SQL test uses a transaction and rolls its test changes
 back.

@@ -85,6 +85,19 @@
     .day p{font-size:12px;color:var(--muted)}
     .list{display:grid;gap:10px}
     .list-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fff}
+    .shopping-layout{display:grid;grid-template-columns:minmax(240px,.65fr) minmax(0,1.35fr);gap:17px}
+    .shopping-toolbar{display:grid;grid-template-columns:minmax(190px,1.5fr) repeat(4,minmax(120px,.75fr));gap:9px;margin:15px 0}
+    .shopping-card{display:grid;grid-template-columns:92px minmax(0,1fr);gap:15px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}
+    .shopping-thumb{width:92px;height:108px;border-radius:13px;overflow:hidden;background:linear-gradient(145deg,#edf6f5,#fff);border:1px solid var(--line);display:grid;place-items:center;color:var(--teal-dark);font-size:26px}
+    .shopping-thumb img{width:100%;height:100%;object-fit:cover}
+    .shopping-main{min-width:0}.shopping-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .shopping-price{font-weight:850}.shopping-detail{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0;color:var(--muted);font-size:12px}
+    .shopping-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.shopping-actions .btn{padding:8px 10px;font-size:11px}
+    .shopping-card.purchased{opacity:.72}.shopping-card.purchased .name{text-decoration:line-through}
+    .field-label{display:grid;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}
+    .form-error{display:none;color:var(--danger);font-size:12px;margin:5px 0 0}.form-error.visible{display:block}
+    .image-preview{width:110px;height:130px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--soft);display:grid;place-items:center;color:var(--teal-dark)}
+    .image-preview img{width:100%;height:100%;object-fit:cover}
     .progress{height:10px;border-radius:999px;background:#e8efee;overflow:hidden}.progress>div{height:100%;background:var(--teal)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.56);display:none;place-items:center;z-index:20;padding:16px}
     .modal.open{display:grid}.modal-card{width:min(700px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:22px}
@@ -109,6 +122,9 @@
       main{padding:18px 13px 90px}
       .stats{grid-template-columns:repeat(2,1fr)}
       .two,.three{grid-template-columns:1fr}
+      .shopping-layout{grid-template-columns:1fr}
+      .shopping-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .shopping-toolbar input{grid-column:1/-1}
       .calendar{grid-template-columns:repeat(2,1fr)}
     }
     @media(max-width:560px){
@@ -117,6 +133,8 @@
       .form-grid{grid-template-columns:1fr}.wide{grid-column:auto}
       .slots{grid-template-columns:1fr 1fr}
       .card .body{padding:10px}.name{font-size:14px}
+      .shopping-toolbar{grid-template-columns:1fr}.shopping-toolbar input{grid-column:auto}
+      .shopping-card{grid-template-columns:76px minmax(0,1fr);gap:11px}.shopping-thumb{width:76px;height:92px}
     }
   </style>
 </head>
@@ -254,10 +272,20 @@
     </section>
 
     <section id="shopping" class="view hidden">
-      <div class="topbar"><div><div class="eyebrow">Intentional shopping</div><h2>Wardrobe Gaps</h2><p class="subtitle">See what may add versatility before buying more.</p></div></div>
-      <div class="grid two">
+      <div class="topbar"><div><div class="eyebrow">Intentional shopping</div><h2>Shopping List</h2><p class="subtitle">Save private product ideas, compare target prices, and shop thoughtfully.</p></div><button class="btn primary" id="openShoppingModal">+ Add product</button></div>
+      <div class="shopping-layout">
         <div class="panel"><h3>Suggested additions</h3><div id="gapList" class="list" style="margin-top:14px"></div></div>
-        <div class="panel"><h3>Personal shopping list</h3><div class="controls" style="margin:14px 0"><input id="shoppingInput" placeholder="Add an item..." /><button class="btn primary" id="addShopping">Add</button></div><div id="shoppingList" class="list"></div></div>
+        <div class="panel">
+          <h3>Personal shopping list</h3>
+          <div class="shopping-toolbar">
+            <input id="shoppingSearch" placeholder="Search products, brands, or retailers" />
+            <select id="shoppingCategory"><option>All</option><option>Top</option><option>Bottom</option><option>Dress</option><option>Outerwear</option><option>Shoes</option><option>Accessory</option><option>Handbag</option><option>Beauty</option><option>Fragrance</option><option>Other</option></select>
+            <select id="shoppingPriority"><option>All</option><option>High</option><option>Medium</option><option>Low</option></select>
+            <select id="shoppingPurchased"><option>All</option><option>Not purchased</option><option>Purchased</option></select>
+            <select id="shoppingSort"><option value="newest">Newest</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="priority">Priority</option></select>
+          </div>
+          <div id="shoppingList" class="list"></div>
+        </div>
       </div>
     </section>
 
@@ -317,6 +345,36 @@
       <button class="btn primary wide" type="submit">Add to closet</button>
     </form>
     <p class="camera-note">On iPad, tap “Choose File,” then select Photo Library to use an existing photo. Automatic background removal and brand recognition require a connected AI service.</p>
+  </div>
+</div>
+
+<div id="shoppingModal" class="modal">
+  <div class="modal-card">
+    <div class="panel-head"><div><h3 id="shoppingModalTitle">Add shopping item</h3><p class="subtitle">Product details and images stay private to your account.</p></div><button class="btn ghost" id="closeShoppingModal" type="button">Close</button></div>
+    <form id="shoppingForm" class="form-grid" novalidate>
+      <input id="shoppingItemId" type="hidden" />
+      <label class="field-label wide">Product name *<input id="shoppingName" required maxlength="160" placeholder="Product name" /><span class="form-error" data-error="name"></span></label>
+      <label class="field-label">Brand or designer<input id="shoppingBrand" maxlength="120" placeholder="Brand or designer" /></label>
+      <label class="field-label">Category<select id="shoppingItemCategory"><option value="">Choose category</option><option>Top</option><option>Bottom</option><option>Dress</option><option>Outerwear</option><option>Shoes</option><option>Accessory</option><option>Handbag</option><option>Beauty</option><option>Fragrance</option><option>Other</option></select></label>
+      <label class="field-label wide">Product link<input id="shoppingProductUrl" type="url" inputmode="url" placeholder="https://retailer.com/product" /><span class="form-error" data-error="product_url"></span></label>
+      <label class="field-label">Retailer or website<input id="shoppingRetailer" maxlength="120" placeholder="Retailer (auto-filled from link)" /></label>
+      <label class="field-label">Seller or marketplace<input id="shoppingSeller" maxlength="120" placeholder="Seller or marketplace" /></label>
+      <label class="field-label">Current price ($)<input id="shoppingCurrentPrice" type="number" min="0" step="0.01" inputmode="decimal" /><span class="form-error" data-error="current_price"></span></label>
+      <label class="field-label">Target price ($)<input id="shoppingTargetPrice" type="number" min="0" step="0.01" inputmode="decimal" /><span class="form-error" data-error="target_price"></span></label>
+      <label class="field-label">Desired size<input id="shoppingSize" maxlength="80" placeholder="e.g. US 8, Medium" /><span class="form-error" data-error="desired_size"></span></label>
+      <label class="field-label">Desired color<input id="shoppingColor" maxlength="80" placeholder="Desired color" /></label>
+      <label class="field-label">Priority<select id="shoppingItemPriority"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+      <label class="field-label">Condition<select id="shoppingCondition"><option value="">Not specified</option><option>New</option><option>Like new</option><option>Excellent</option><option>Good</option><option>Fair</option></select></label>
+      <label class="field-label">Hardware color<input id="shoppingHardware" maxlength="80" placeholder="Gold, silver, palladium..." /></label>
+      <label class="field-label">Authenticity status<select id="shoppingAuthenticity"><option value="">Not specified</option><option>Not verified</option><option>Seller authenticated</option><option>Third-party authenticated</option><option>Certificate included</option></select></label>
+      <label class="field-label wide">Image from camera or photo library<input id="shoppingImage" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /></label>
+      <label class="field-label wide">Or image link<input id="shoppingImageUrl" type="url" inputmode="url" placeholder="https://example.com/product-image.jpg" /><span class="form-error" data-error="external_image_url"></span></label>
+      <div class="wide controls"><div id="shoppingImagePreview" class="image-preview">No image</div><button class="btn ghost" id="removeShoppingImage" type="button">Remove image</button></div>
+      <label class="field-label wide">Notes<textarea id="shoppingNotes" rows="3" maxlength="2000" placeholder="Fit notes, details, or why you are considering it"></textarea></label>
+      <label class="field-label wide" style="display:flex;grid-template-columns:auto 1fr;align-items:center"><input id="shoppingItemPurchased" type="checkbox" /> Mark as purchased</label>
+      <button class="btn primary wide" type="submit" id="saveShoppingItem">Save shopping item</button>
+    </form>
+    <p class="camera-note">On iPad, tap the image field to choose Take Photo or Photo Library. Product links open in your browser; Closet Curator+ never purchases or submits checkout information.</p>
   </div>
 </div>
 
@@ -457,6 +515,7 @@ renderAll();surprise();
 <div id="syncBadge" class="tag sync-badge">Connecting…</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=20260727-2"></script>
-<script src="cloud-app.js?v=20260727-3"></script>
+<script src="shopping-utils.js?v=20260727-1"></script>
+<script src="cloud-app.js?v=20260727-4"></script>
 </body>
 </html>

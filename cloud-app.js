@@ -21,6 +21,8 @@
     Top: "👚", Bottom: "👖", Dress: "👗", Outerwear: "🧥",
     Shoes: "👠", Accessory: "💍", Handbag: "👜", Beauty: "💄",
   };
+  const shoppingUtils = window.ShoppingUtils;
+  let removeExistingShoppingImage = false;
 
   let client;
   let user;
@@ -95,6 +97,17 @@
     }));
   }
 
+  async function loadShoppingPhotos(rows) {
+    await Promise.all(rows.map(async (item) => {
+      item.image = item.external_image_url || "";
+      if (!item.image_path) return;
+      const { data, error } = await client.storage
+        .from("clothing-photos")
+        .createSignedUrl(item.image_path, 3600);
+      if (!error) item.image = data.signedUrl;
+    }));
+  }
+
   async function loadCloudData() {
     if (!user) return;
     syncStatus("Syncing…");
@@ -139,7 +152,12 @@
         looks.find((look) => look.id === entry.outfit_id)?.name || "Saved outfit",
       ])
     );
-    shopping = shoppingResult.data;
+    shopping = shoppingResult.data.map((row) => ({
+      ...row,
+      current_price: row.current_price == null ? null : Number(row.current_price),
+      target_price: row.target_price == null ? null : Number(row.target_price),
+    }));
+    await loadShoppingPhotos(shopping);
     renderAll();
     syncStatus("Synced");
   }
@@ -328,8 +346,42 @@
     $("gapList").innerHTML = gaps.length
       ? gaps.map(([category, count]) => `<div class="list-row"><span>Add a versatile ${category.toLowerCase()}</span><span class="tag">${count - (counts[category] || 0)} suggested</span></div>`).join("")
       : '<div class="empty">Your core categories are well represented.</div>';
-    $("shoppingList").innerHTML = shopping.length
-      ? shopping.map((item) => `<div class="list-row"><span>${esc(item.name)}</span><button class="btn danger" onclick="removeShopping('${item.id}')">Remove</button></div>`).join("")
+    const visible = shoppingUtils.filterAndSortShoppingItems(shopping, {
+      query: $("shoppingSearch").value, category: $("shoppingCategory").value,
+      priority: $("shoppingPriority").value, purchased: $("shoppingPurchased").value,
+      sort: $("shoppingSort").value,
+    });
+    $("shoppingList").innerHTML = visible.length
+      ? visible.map((item) => {
+        const safeUrl = shoppingUtils.normalizeHttpUrl(item.product_url);
+        const retailer = item.retailer_name || shoppingUtils.retailerFromUrl(safeUrl);
+        const preferences = [
+          item.desired_size && `Size ${item.desired_size}`, item.desired_color,
+        ].filter(Boolean);
+        return `<article class="shopping-card${item.purchased ? " purchased" : ""}">
+          <div class="shopping-thumb">${item.image
+            ? `<img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy" onerror="this.parentNode.textContent='✦'">`
+            : "✦"}</div>
+          <div class="shopping-main">
+            <div class="shopping-title"><div><div class="name">${esc(item.name)}</div>
+              <div class="subtitle">${esc(item.brand || "Brand not specified")}${retailer ? ` · ${esc(retailer)}` : ""}</div></div>
+              <span class="tag">${item.purchased ? "Purchased" : esc(item.priority || "Medium")}</span>
+            </div>
+            <div class="shopping-detail">
+              ${item.current_price != null ? `<span class="shopping-price">${money(item.current_price)}</span>` : ""}
+              ${item.target_price != null ? `<span>Target ${money(item.target_price)}</span>` : ""}
+              ${item.category ? `<span>${esc(item.category)}</span>` : ""}
+              ${preferences.length ? `<span>${esc(preferences.join(" · "))}</span>` : ""}
+            </div>
+            <div class="shopping-actions">
+              ${safeUrl ? `<a class="btn secondary" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer external">View Product</a>` : ""}
+              <button class="btn ghost" onclick="editShopping('${item.id}')">Edit</button>
+              <button class="btn ghost" onclick="toggleShoppingPurchased('${item.id}')">${item.purchased ? "Mark not purchased" : "Mark purchased"}</button>
+              <button class="btn danger" onclick="removeShopping('${item.id}')">Delete</button>
+            </div>
+          </div>
+        </article>`;
+      }).join("")
       : '<div class="empty">Your shopping list is empty.</div>';
   }
 
@@ -477,16 +529,169 @@
     await loadCloudData();
   }
 
-  async function addShopping() {
-    const name = $("shoppingInput").value.trim();
-    if (!name) return;
-    const { error } = await client.from("shopping_list_items").insert({ user_id: user.id, name });
+  function shoppingFormData() {
+    const productUrl = $("shoppingProductUrl").value.trim();
+    return {
+      name: $("shoppingName").value.trim(),
+      brand: $("shoppingBrand").value.trim() || null,
+      product_url: productUrl || null,
+      external_image_url: $("shoppingImageUrl").value.trim() || null,
+      retailer_name: $("shoppingRetailer").value.trim() ||
+        shoppingUtils.retailerFromUrl(productUrl) || null,
+      seller_marketplace: $("shoppingSeller").value.trim() || null,
+      current_price: $("shoppingCurrentPrice").value === "" ? null : Number($("shoppingCurrentPrice").value),
+      target_price: $("shoppingTargetPrice").value === "" ? null : Number($("shoppingTargetPrice").value),
+      category: $("shoppingItemCategory").value || null,
+      desired_size: $("shoppingSize").value.trim() || null,
+      desired_color: $("shoppingColor").value.trim() || null,
+      condition: $("shoppingCondition").value || null,
+      hardware_color: $("shoppingHardware").value.trim() || null,
+      authenticity_status: $("shoppingAuthenticity").value || null,
+      priority: $("shoppingItemPriority").value,
+      purchased: $("shoppingItemPurchased").checked,
+      notes: $("shoppingNotes").value.trim() || null,
+    };
+  }
+
+  function showShoppingErrors(errors) {
+    document.querySelectorAll("[data-error]").forEach((node) => {
+      node.textContent = errors[node.dataset.error] || "";
+      node.classList.toggle("visible", Boolean(errors[node.dataset.error]));
+    });
+  }
+
+  function updateShoppingPreview(url) {
+    const preview = $("shoppingImagePreview");
+    const safeUrl = shoppingUtils.normalizeHttpUrl(url);
+    preview.innerHTML = safeUrl
+      ? `<img src="${esc(safeUrl)}" alt="Product image preview" onerror="this.parentNode.textContent='Image unavailable'">`
+      : "No image";
+  }
+
+  function resetShoppingForm() {
+    $("shoppingForm").reset();
+    $("shoppingItemId").value = "";
+    $("shoppingModalTitle").textContent = "Add shopping item";
+    $("saveShoppingItem").textContent = "Save shopping item";
+    removeExistingShoppingImage = false;
+    showShoppingErrors({});
+    updateShoppingPreview("");
+  }
+
+  function openShoppingModal() {
+    resetShoppingForm();
+    $("shoppingModal").classList.add("open");
+  }
+
+  function editShopping(id) {
+    const item = shopping.find((entry) => entry.id === id);
+    if (!item) return;
+    resetShoppingForm();
+    $("shoppingItemId").value = item.id;
+    $("shoppingModalTitle").textContent = "Edit shopping item";
+    $("saveShoppingItem").textContent = "Save changes";
+    const values = {
+      shoppingName: item.name, shoppingBrand: item.brand, shoppingProductUrl: item.product_url,
+      shoppingRetailer: item.retailer_name, shoppingSeller: item.seller_marketplace,
+      shoppingCurrentPrice: item.current_price, shoppingTargetPrice: item.target_price,
+      shoppingItemCategory: item.category, shoppingSize: item.desired_size,
+      shoppingColor: item.desired_color, shoppingItemPriority: item.priority || "Medium",
+      shoppingCondition: item.condition, shoppingHardware: item.hardware_color,
+      shoppingAuthenticity: item.authenticity_status, shoppingImageUrl: item.external_image_url,
+      shoppingNotes: item.notes,
+    };
+    Object.entries(values).forEach(([idKey, value]) => { $(idKey).value = value ?? ""; });
+    $("shoppingItemPurchased").checked = Boolean(item.purchased);
+    updateShoppingPreview(item.image);
+    $("shoppingModal").classList.add("open");
+  }
+
+  async function compressShoppingImage(file) {
+    if (!file) return null;
+    if (file.size > 20 * 1024 * 1024) throw new Error("Choose an image smaller than 20 MB.");
+    if (!file.type.startsWith("image/")) throw new Error("Choose a valid image file.");
+    const bitmap = await createImageBitmap(file);
+    const max = 1400;
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .82));
+    bitmap.close?.();
+    if (!blob) throw new Error("This image could not be prepared. Try a JPG or PNG.");
+    return blob;
+  }
+
+  async function uploadShoppingImage(file, itemId) {
+    const blob = await compressShoppingImage(file);
+    if (!blob) return null;
+    const path = `${user.id}/shopping-list/${itemId}/${crypto.randomUUID()}.jpg`;
+    const { error } = await client.storage.from("clothing-photos")
+      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (error) throw error;
+    return path;
+  }
+
+  async function saveShopping(event) {
+    event.preventDefault();
+    const values = shoppingFormData();
+    const validation = shoppingUtils.validateShoppingItem(values);
+    showShoppingErrors(validation.errors);
+    if (!validation.valid) return;
+
+    const id = $("shoppingItemId").value || crypto.randomUUID();
+    const existing = shopping.find((entry) => entry.id === id);
+    const file = $("shoppingImage").files[0];
+    const button = $("saveShoppingItem");
+    button.disabled = true;
+    button.textContent = file ? "Uploading image…" : "Saving…";
+    let newPath = null;
+    try {
+      if (file) newPath = await uploadShoppingImage(file, id);
+      const oldPath = existing?.image_path || null;
+      const payload = {
+        ...values, id, user_id: user.id,
+        image_path: newPath || (removeExistingShoppingImage ? null : oldPath),
+        completed: values.purchased,
+      };
+      const result = existing
+        ? await client.from("shopping_list_items").update(payload).eq("id", id)
+        : await client.from("shopping_list_items").insert(payload);
+      if (result.error) throw result.error;
+      if (oldPath && (newPath || removeExistingShoppingImage)) {
+        const removal = await client.storage.from("clothing-photos").remove([oldPath]);
+        if (removal.error) alert(`Item saved, but the old image could not be removed: ${removal.error.message}`);
+      }
+      $("shoppingModal").classList.remove("open");
+      resetShoppingForm();
+      await loadCloudData();
+    } catch (error) {
+      if (newPath) await client.storage.from("clothing-photos").remove([newPath]);
+      alert(`Could not save shopping item: ${error.message}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = existing ? "Save changes" : "Save shopping item";
+    }
+  }
+
+  async function toggleShoppingPurchased(id) {
+    const item = shopping.find((entry) => entry.id === id);
+    if (!item) return;
+    const purchased = !item.purchased;
+    const { error } = await client.from("shopping_list_items")
+      .update({ purchased, completed: purchased }).eq("id", id);
     if (error) return alert(error.message);
-    $("shoppingInput").value = "";
     await loadCloudData();
   }
 
   async function removeShopping(id) {
+    const item = shopping.find((entry) => entry.id === id);
+    if (!item || !confirm("Delete this shopping item and its private image?")) return;
+    if (item.image_path) {
+      const removal = await client.storage.from("clothing-photos").remove([item.image_path]);
+      if (removal.error) return alert(`Could not remove image: ${removal.error.message}`);
+    }
     const { error } = await client.from("shopping_list_items").delete().eq("id", id);
     if (error) return alert(error.message);
     await loadCloudData();
@@ -522,7 +727,30 @@
     $("search").oninput = renderCloset;
     $("filterCategory").onchange = renderCloset;
     $("filterSeason").onchange = renderCloset;
-    $("addShopping").onclick = addShopping;
+    $("openShoppingModal").onclick = openShoppingModal;
+    $("closeShoppingModal").onclick = () => $("shoppingModal").classList.remove("open");
+    $("shoppingModal").onclick = (event) => {
+      if (event.target === $("shoppingModal")) $("shoppingModal").classList.remove("open");
+    };
+    $("shoppingForm").onsubmit = saveShopping;
+    $("shoppingProductUrl").onblur = () => {
+      if (!$("shoppingRetailer").value.trim()) {
+        $("shoppingRetailer").value = shoppingUtils.retailerFromUrl($("shoppingProductUrl").value);
+      }
+    };
+    $("shoppingImageUrl").oninput = () => updateShoppingPreview($("shoppingImageUrl").value);
+    $("shoppingImage").onchange = () => {
+      const file = $("shoppingImage").files[0];
+      if (file) updateShoppingPreview(URL.createObjectURL(file));
+    };
+    $("removeShoppingImage").onclick = () => {
+      removeExistingShoppingImage = true;
+      $("shoppingImage").value = "";
+      $("shoppingImageUrl").value = "";
+      updateShoppingPreview("");
+    };
+    ["shoppingSearch", "shoppingCategory", "shoppingPriority", "shoppingPurchased", "shoppingSort"]
+      .forEach((id) => { $(id).oninput = renderGaps; });
     $("exportData").onclick = () => {
       const backup = { items, looks, planner, shopping, exportedAt: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -539,6 +767,8 @@
     window.editItem = editItem;
     window.deleteLook = deleteLook;
     window.assignDay = assignDay;
+    window.editShopping = editShopping;
+    window.toggleShoppingPurchased = toggleShoppingPurchased;
     window.removeShopping = removeShopping;
   }
 
